@@ -46,8 +46,16 @@ int main(int argc, char **argv) {
   
   std::cout << "Waiting for a client to connect...\n";
   
-  accept(server_fd, (struct sockaddr *) &client_addr, (socklen_t *) &client_addr_len);
+  int client_fd = accept(server_fd, (struct sockaddr *) &client_addr, (socklen_t *) &client_addr_len);
   std::cout << "Client connected\n";
+
+  char wbuf[1024] = {0};
+
+  read(client_fd, wbuf, 1024);
+
+  if (memcmp(wbuf, "*1\r\n$4\r\nping\r\n", 15) == 0) {
+    write(client_fd, "+PONG\r\n", 7);
+  }
   
   close(server_fd);
 
