@@ -17,6 +17,8 @@ public:
 
 std::string PingCommand(Server* server, std::vector<Data*> args);
 std::string EchoCommand(Server* server, std::vector<Data*> args);
+std::string SetCommand(Server* server, std::vector<Data*> args);
+std::string GetCommand(Server* server, std::vector<Data*> args);
 
 class CommandManager {
 private:

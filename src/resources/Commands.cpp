@@ -12,6 +12,8 @@ CommandManager::CommandManager(Server* _server) {
 
     this->functionMap.insert({"ping", PingCommand});
     this->functionMap.insert({"echo", EchoCommand});
+    this->functionMap.insert({"set", SetCommand});
+    this->functionMap.insert({"get", GetCommand});
 }
 
 std::string PingCommand(Server* server, std::vector<Data*> args) {
@@ -23,6 +25,19 @@ std::string EchoCommand(Server* server, std::vector<Data*> args) {
     if (args.size() != 1) throw CommandError("ping", "expected 1 arguments, got " + std::to_string(args.size()));
     
     return args[0]->toRespString();
+}
+
+std::string SetCommand(Server* server, std::vector<Data*> args) {
+    if (args.size() != 2) throw CommandError("ping", "expected 2 arguments, got " + std::to_string(args.size()));
+
+    server->setData(args[0]->getStringData(), args[1]);
+    return "+OK\r\n";
+}
+
+std::string GetCommand(Server* server, std::vector<Data*> args) {
+    if (args.size() != 1) throw CommandError("ping", "expected 1 arguments, got " + std::to_string(args.size()));
+
+    return server->getData(args[0]->getStringData())->toRespString();
 }
 
 std::string CommandManager::runCommand(Data* cmd) {

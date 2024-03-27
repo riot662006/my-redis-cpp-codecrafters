@@ -70,3 +70,15 @@ void serverConfig(Server* server, int argc, char ** argv) {
   std::cerr << "Server online\n";
 }
 
+void Server::setData(std::string key, Data* val) {
+  if (key.length() == 0) return;
+  val->setToImportant(); // so it does not get deleted
+
+  this->database.insert({key, val});
+}
+
+Data* Server::getData(std::string key) {
+  if (this->database.find(key) == this->database.end()) return nullptr;
+
+  return this->database.at(key);
+}

@@ -22,6 +22,7 @@ public:
     ~Data();
 
     std::string toRespString(bool readable = false);
+    void setToImportant() {this->isImportant = true;}
 
     int getType() {return this->type;}
     std::vector<Data*> getArrayData() {return this->arrayData;}
