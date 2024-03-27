@@ -1,9 +1,12 @@
 #include "./resources/Server.h"
+#include "./resources/Commands.h"
 
 int main(int argc, char **argv) {
     // Server socket initializer
     Server* server = new Server();
     serverConfig(server, argc, argv);
+
+    CommandManager cmdManager = CommandManager(server);
     
     std::vector<pollfd> polls;
     std::stack<int> deadConns;
@@ -45,6 +48,20 @@ int main(int argc, char **argv) {
             if (polls[i].revents | POLLIN) {
                 tryRead(conn);
             }
+
+            if (conn->processMem != nullptr) {
+                if (conn->processMem->getType() == DataType::ARRAY) { // is a commmand
+                    try {
+                        std::string response = cmdManager.runCommand(conn->processMem);
+                        delete conn->processMem;
+                        conn->processMem = nullptr;
+
+                        tryAddResponse(conn, response);
+                    } catch (CommandError& e) {
+                        std::cerr << e.what() << "\n";
+                    }
+                }
+            } 
 
             if (polls[i].revents | POLLOUT) {
                 tryWrite(conn);

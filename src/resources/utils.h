@@ -5,7 +5,9 @@
 #include <cstdlib>
 #include <cstring>
 #include <errno.h>
+#include <exception>
 #include <fcntl.h>
+#include <functional>
 #include <iostream>
 #include <netdb.h>
 #include <poll.h>
@@ -19,11 +21,29 @@
 #include <deque>
 
 const int MAX_BUF_SIZE = 1024;
+const std::unordered_map<char, std::string> specialCharacters = {
+    {'\0', "\\0"},
+    {'\r', "\\r"},
+    {'\n', "\\n"}
+};
 
 enum {
     STATE_END = 0,
     STATE_READ = 1,
     STATE_WRITE = 2
+};
+
+namespace DataType {
+    enum {
+        NONE = 0,
+        BULK_STR = 1,
+        ARRAY = 2,
+    };
+
+    const static std::unordered_map<char, int> identifiers {
+        {'*', ARRAY},
+        {'$', BULK_STR}
+    };
 };
 
 class Buffer{
@@ -44,8 +64,12 @@ public:
     int addToBuffer(char* data, size_t n);
     
     char* getBuffer() {return this->buf;}
+    std::string getString(size_t n, bool readable = false);
     bool isEmpty() {return this->bytes == 0;}
+    char at(size_t n) {return (n < bytes) ? (*(this->buf + n)) : 0;}
+    void pop() {this->clearData(1);}
     size_t size() {return bytes;}
 };
 
 int fd_set_nb(int fd);
+std::string to_readable(std::string str);

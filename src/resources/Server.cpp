@@ -15,7 +15,6 @@ Server::~Server() {
   }
 }
 
-
 void Server::acceptNewConn() {
   struct sockaddr_in client_addr; // for the single client
   int client_addr_len = sizeof(client_addr);

@@ -1,8 +1,9 @@
 #include "utils.h"
 
 void Buffer::clearData(size_t n) {
-    if (this->bytes > n) {
+    if (this->bytes < n) {
         memset(this->buf, 0, this->bytes);
+        this->bytes = 0;
     } else {
         this->bytes -= n;
 
@@ -11,11 +12,32 @@ void Buffer::clearData(size_t n) {
     }
 }
 
+std::string to_readable(std::string str) {
+    std::string res = "";
+
+    for (auto c : str) {
+        if (specialCharacters.find(c) != specialCharacters.end()) {
+            res.append(specialCharacters.at(c));
+        } else {
+            res.push_back(c);
+        }
+    }
+
+    return res;
+}
+
 int Buffer::addToBuffer(char* data, size_t n) {
     if (MAX_BUF_SIZE - this->bytes < n) return -1;
     memcpy(this->buf + this->bytes, data, n);
     this->bytes += n;
     return 0;
+}
+
+std::string Buffer::getString(size_t n, bool readable){
+    std::string res(this->buf, this->buf + std::min(n, this->bytes));
+
+    if (readable) return to_readable(res);
+    return res;
 }
 
 int fd_set_nb(int fd) {

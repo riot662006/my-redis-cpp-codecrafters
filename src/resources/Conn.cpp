@@ -12,7 +12,7 @@ void tryRead(Conn* conn) {
     
     if (n < 0) {
         if (errno != EAGAIN && errno != EWOULDBLOCK) {
-            std::cerr << "Conn@" << conn->fd << "read() error\n";
+            std::cerr << "Conn@" << conn->fd << ": read() error\n";
             conn->state = STATE_END;
         }
     } else if (n == 0) {
@@ -23,17 +23,21 @@ void tryRead(Conn* conn) {
     }
 
     if (conn->state == STATE_END) return;
-    
-    while (!conn->rbuf->isEmpty()) {
-        if (conn->rbuf->size() >= 14) {
-            if (memcmp(conn->rbuf->getBuffer(), "*1\r\n$4\r\nping\r\n", 14) == 0) { // checks if the buffer has the ping command
-                conn->writeQueue.push_back("+PONG\r\n"); // sends PONG response
-                conn->state = STATE_WRITE;
-                conn->rbuf->clearData(14);
-            }
+
+    try {
+        while (true){
+            conn->parser->parse();
         }
+    } catch (ParserError& e){
+        std::cerr << e.what() << '\n';
+        conn->state = STATE_END;
+    } catch (ParserEOF& e) {
+        if (!conn->parser->isDone()) return;
+
+        conn->processMem = conn->parser->toData();
+        conn->parser->reset();
     }
-}
+} 
 
 void tryWrite(Conn* conn) {
     if (conn->state == STATE_END) return;
@@ -50,11 +54,11 @@ void tryWrite(Conn* conn) {
 
         if (n < 0) {
             if (errno != EAGAIN && errno != EWOULDBLOCK) {
-                std::cerr << "Conn@" << conn->fd << "write() error\n";
+                std::cerr << "Conn@" << conn->fd << ": write() error\n";
                 conn->state = STATE_END;
             }
         } else if (n == 0) {
-            std::cerr << "Conn@" << conn->fd << "write() error\n";
+            std::cerr << "Conn@" << conn->fd << ": write() error\n";
             conn->state = STATE_END;
         } else {
             if (n < response.length()) {
@@ -62,9 +66,16 @@ void tryWrite(Conn* conn) {
             }
         }
     } else {
-        std::cerr << "Conn@" << conn->fd << "write() error\n";
+        std::cerr << "Conn@" << conn->fd << ": write() error\n";
         conn->state = STATE_END;
     }
 
     if (conn->state == STATE_WRITE && conn->writeQueue.empty()) conn->state = STATE_READ;
+}
+
+void tryAddResponse(Conn* conn, std::string response) {
+    if (response.length() > 0) {
+        conn->writeQueue.push_back(response);
+        conn->state = STATE_WRITE;
+    }
 }

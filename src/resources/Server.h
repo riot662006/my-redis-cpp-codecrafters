@@ -1,4 +1,5 @@
 #include "Conn.h"
+#pragma once
 
 class Server {
     int fd;
