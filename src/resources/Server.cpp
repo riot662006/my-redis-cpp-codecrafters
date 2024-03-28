@@ -28,19 +28,50 @@ void Master::handshake() {
   std::cerr << "Handshake stage 1...";
   std::string ping{"*1\r\n$4\r\nping\r\n"};
 
-  int n = write(this->fd, ping.c_str(), ping.size());
-  if (n < 14) throw HandshakeError(1, "Could not send ping");
+  int n = send(this->fd, ping.c_str(), ping.size(), 0);
+  if (n < ping.size()) throw HandshakeError(1, "Could not send ping");
 
   n = recv(this->fd, tempBuffer, 1024, 0);
   if (n <= 0) throw HandshakeError(1,"Did not receive feedback on ping command");
 
   buffer.addToBuffer(tempBuffer, n);
-  if (buffer.getString(n) != "+PONG\r\n") throw HandshakeError(1, "Invalid response to ping command. Got '" + buffer.getString(n) + "'");
+  if (buffer.getString(n) != "+PONG\r\n") throw HandshakeError(1, "Invalid response to ping command. Got '" + buffer.getString(n, true) + "'");
+  buffer.clearData(n);
+  std::cerr << "complete\n";
+
+  // stage 2
+  std::cerr << "Handshake stage 2...";
+  std::string replconf1 = Data(std::vector<std::string>{"REPLCONF", "listening-port", std::to_string(this->server->port)}).toRespString();
+
+  n = send(this->fd, replconf1.c_str(), replconf1.size(), 0);
+  if (n < replconf1.size()) throw HandshakeError(2, "Could not send first replconf command");
+
+  n = recv(this->fd, tempBuffer, 1024, 0);
+  if (n <= 0) throw HandshakeError(1,"Did not receive feedback on replconf command");
+
+  buffer.addToBuffer(tempBuffer, n);
+  if (buffer.getString(n) != "+OK\r\n") throw HandshakeError(2, "Invalid response to replconf command. Got '" + buffer.getString(n, true) + "'");
+  buffer.clearData(n);
+
+  std::string replconf2 = Data(std::vector<std::string>{"REPLCONF", "capa", "psync2"}).toRespString();
+
+  n = send(this->fd, replconf2.c_str(), replconf2.size(), 0);
+  if (n < replconf2.size()) throw HandshakeError(2, "Could not send second replconf command");
+
+  n = recv(this->fd, tempBuffer, 1024, 0);
+  if (n <= 0) throw HandshakeError(1,"Did not receive feedback on replconf command");
+
+  buffer.addToBuffer(tempBuffer, n);
+  if (buffer.getString(n) != "+OK\r\n") throw HandshakeError(2, "Invalid response to replconf command. Got '" + buffer.getString(n, true) + "'");
+  buffer.clearData(n);
+
   std::cerr << "complete\n";
 }
 
-void Master::config() {
+void Master::config(Server* _server) {
   if (!this->isRunning()) return;
+
+  this->server = _server;
   
   struct sockaddr_in server_addr;
   memset(&server_addr, 0, sizeof(server_addr));
@@ -126,7 +157,7 @@ void Server::config(int argc, char ** argv) {
         
         this->master = new Master(std::string(argv[ptr + 1]), std::atoi(argv[ptr + 2]));
         this->role = "slave";
-        this->master->config();
+        this->master->config(this);
 
         if (!this->master->isRunning()) {
           this->closeServer(); return;

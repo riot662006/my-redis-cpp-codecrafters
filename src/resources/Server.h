@@ -2,6 +2,8 @@
 #include "Conn.h"
 #pragma once
 
+class Server;
+
 class HandshakeError : public std::exception {
     std::string msg;
     int stage;
@@ -17,17 +19,20 @@ class Master {
     int fd;
 
     int state = STATE_READ;
+    Server* server;
 
 public:
     Master(std::string _host, int _port);
     ~Master() {this->closeConn();}
-    void config();
+    void config(Server* _server);
     void handshake();
     bool isRunning() {return this->state != STATE_END;}
     void closeConn() {close(this->fd); this->state = STATE_END;}
 };
 
 class Server {
+private:
+    friend Master;
     int fd;
     int port = 6379;
 

@@ -11,7 +11,7 @@ Data::Data(std::vector<Data*> _arrData) {
 }
 
 Data::Data(std::vector<std::string> _arrData) {
-    this->type = DataType::BULK_STR;
+    this->type = DataType::ARRAY;
     for (auto data : _arrData) this->arrayData.push_back(new Data(data));
 }
 
