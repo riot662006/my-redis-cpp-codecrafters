@@ -16,35 +16,65 @@ CommandManager::CommandManager(Server* _server) {
     this->functionMap.insert({"get", GetCommand});
 }
 
-std::string PingCommand(Server* server, std::vector<Data*> args) {
+std::string PingCommand(Server* server, std::queue<Data*> args) {
     if (args.size() != 0) throw CommandError("ping", "expected 0 arguments, got " + std::to_string(args.size()));
     return "+PONG\r\n";
 }
 
-std::string EchoCommand(Server* server, std::vector<Data*> args) {
-    if (args.size() != 1) throw CommandError("ping", "expected 1 arguments, got " + std::to_string(args.size()));
+std::string EchoCommand(Server* server, std::queue<Data*> args) {
+    if (args.size() != 1) throw CommandError("echo", "expected 1 arguments, got " + std::to_string(args.size()));
     
-    return args[0]->toRespString();
+    return args.front()->toRespString();
 }
 
-std::string SetCommand(Server* server, std::vector<Data*> args) {
-    if (args.size() != 2) throw CommandError("ping", "expected 2 arguments, got " + std::to_string(args.size()));
+std::string SetCommand(Server* server, std::queue<Data*> args) {
+    if (args.size() < 2) throw CommandError("set", "expected 2 or more arguments, got " + std::to_string(args.size()));
 
-    server->setData(args[0]->getStringData(), args[1]);
+    std::string key = args.front()->getStringData(); args.pop();
+    Data* value = args.front(); args.pop();
+
+    std::string opt;
+    try {
+        while (!args.empty()) {
+            opt = args.front()->getStringData(); args.pop();
+            if (opt == "px") {
+                size_t milli = std::stoi(args.front()->getStringData());
+                value->addExpiry(server->getLastPollTime(), milli);
+                args.pop();
+            }
+        }
+    } catch (CommandError& e) {
+        throw e;
+    } catch (std::exception& e) {
+        std::string errorMsg = "error occured while parsing options";
+
+        if (opt.length() > 0) errorMsg += "'" + opt + "'";
+        errorMsg += "\n" + std::string(e.what());
+
+        throw CommandError("set", errorMsg);
+    }
+
+    server->setData(key, value);
     return "+OK\r\n";
 }
 
-std::string GetCommand(Server* server, std::vector<Data*> args) {
-    if (args.size() != 1) throw CommandError("ping", "expected 1 arguments, got " + std::to_string(args.size()));
+std::string GetCommand(Server* server, std::queue<Data*> args) {
+    if (args.size() != 1) throw CommandError("get", "expected 1 arguments, got " + std::to_string(args.size()));
+    Data* data = server->getData(args.front()->getStringData());
 
-    return server->getData(args[0]->getStringData())->toRespString();
+    if (data->hasExpired()) {
+        server->delData(args.front()->getStringData());
+        data = new Data(); // null bulk string
+    }
+
+    return data->toRespString();
 }
 
 std::string CommandManager::runCommand(Data* cmd) {
     std::string cmdName = cmd->getArrayData()[0]->getStringData();
-    std::vector<Data*> args;
+    std::queue<Data*> args;
     for (int i = 1; i < cmd->getArrayData().size(); ++i) {
-        args.push_back(cmd->getArrayData()[i]);
+        args.push(cmd->getArrayData()[i]);
     }
     
     if (this->functionMap.find(cmdName) == this->functionMap.end()) throw CommandError("_", "command Name '" + cmdName + "' does not exist.");

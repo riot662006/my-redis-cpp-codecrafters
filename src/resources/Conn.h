@@ -10,6 +10,7 @@ struct Conn {
     Buffer* rbuf; CommandParser* parser;
     Data* processMem = nullptr;
     std::deque<std::string> writeQueue;
+    short last_poll;
 
     Conn(int f) : fd(f) {
         rbuf = new Buffer();

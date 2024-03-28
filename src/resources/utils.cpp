@@ -57,3 +57,7 @@ int fd_set_nb(int fd) {
 
     return 0;
 }
+
+Timepoint getNow() {
+    return std::chrono::system_clock::now();
+}

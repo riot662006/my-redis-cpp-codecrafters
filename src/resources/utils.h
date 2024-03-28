@@ -1,6 +1,7 @@
 #pragma once
 
 #include <arpa/inet.h>
+#include <chrono>
 #include <csignal>
 #include <cstdlib>
 #include <cstring>
@@ -17,8 +18,12 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <unordered_map>
+#include <queue>
 #include <vector>
 #include <deque>
+
+using Timepoint = std::chrono::system_clock::time_point;
+using Milliseconds = std::chrono::milliseconds;
 
 const int MAX_BUF_SIZE = 1024;
 const std::unordered_map<char, std::string> specialCharacters = {
@@ -73,3 +78,4 @@ public:
 
 int fd_set_nb(int fd);
 std::string to_readable(std::string str);
+Timepoint getNow();

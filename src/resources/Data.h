@@ -9,6 +9,9 @@ private:
 
     std::vector<Data*> arrayData;
     std::string stringData;
+    
+    bool canExpire = false;
+    Timepoint expiryPoint;
 
 public:
     Data() {};
@@ -23,6 +26,10 @@ public:
 
     std::string toRespString(bool readable = false);
     void setToImportant() {this->isImportant = true;}
+
+    void addExpiry(Timepoint ex) {canExpire = true; expiryPoint = ex;}
+    void addExpiry(Timepoint from, size_t milli) {canExpire = true; expiryPoint = from + Milliseconds(milli);}
+    bool hasExpired() {return (canExpire) ? getNow() >= expiryPoint : false;}
 
     int getType() {return this->type;}
     std::vector<Data*> getArrayData() {return this->arrayData;}

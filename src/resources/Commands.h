@@ -5,7 +5,7 @@
 
 #pragma once
 
-using FunctionType = std::function<std::string(Server*, const std::vector<Data*>&)>;
+using CommandFunctionType = std::function<std::string(Server*, const std::queue<Data*>&)>;
 
 class CommandError : public std::exception {
     std::string cmdName, msg;
@@ -15,15 +15,15 @@ public:
     const char* what() const noexcept override;
 };
 
-std::string PingCommand(Server* server, std::vector<Data*> args);
-std::string EchoCommand(Server* server, std::vector<Data*> args);
-std::string SetCommand(Server* server, std::vector<Data*> args);
-std::string GetCommand(Server* server, std::vector<Data*> args);
+std::string PingCommand(Server* server, std::queue<Data*> args);
+std::string EchoCommand(Server* server, std::queue<Data*> args);
+std::string SetCommand(Server* server, std::queue<Data*> args);
+std::string GetCommand(Server* server, std::queue<Data*> args);
 
 class CommandManager {
 private:
     Server* server;
-    std::unordered_map<std::string, FunctionType> functionMap;
+    std::unordered_map<std::string, CommandFunctionType> functionMap;
 public:
     CommandManager(Server* _server);
 
