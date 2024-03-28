@@ -1,10 +1,54 @@
 #include "Server.h"
 
-Server::Server() {
-  fd = socket(AF_INET, SOCK_STREAM, 0);
+Master::Master(std::string _host, int _port) {
+  this->host = _host;
+  this->port = _port;
+
+  this->fd = socket(AF_INET, SOCK_STREAM, 0);
   if (this->fd < 0) {
-      std::cerr << "Failed to create server socket\n";
-      this->state = STATE_END;
+    std::cerr << "Failed to create master socket\n";
+    this->state = STATE_END;
+  }
+};
+
+void Master::config() {
+  if (!this->isRunning()) return;
+  
+  struct addrinfo hints, *res;
+  memset(&hints, 0, sizeof hints);
+  hints.ai_family = AF_INET; // Use IPv4
+  hints.ai_socktype = SOCK_STREAM; // TCP socket
+
+  int status = getaddrinfo(this->host.c_str(), std::to_string(this->port).c_str(), &hints, &res);
+  if (status != 0) {
+    std::cerr << "Error getting address info: " << gai_strerror(status) << std::endl;
+    this->closeConn(); return;
+  }
+
+  // Create socket
+  int sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+  if (sockfd == -1) {
+    std::cerr << "Error creating socket\n";
+    freeaddrinfo(res);
+    this->closeConn(); return;
+  }
+
+  // Connect to the server
+  if (connect(sockfd, res->ai_addr, res->ai_addrlen) == -1) {
+    std::cerr << "Error connecting to server\n";
+    freeaddrinfo(res);
+    this->closeConn(); return;
+  }
+
+  std::cout << "Connected to server on " << this->host << ":" << port << std::endl;
+  freeaddrinfo(res);
+}
+
+Server::Server() {
+  this->fd = socket(AF_INET, SOCK_STREAM, 0);
+  if (this->fd < 0) {
+    std::cerr << "Failed to create server socket\n";
+    this->state = STATE_END;
   }
 };
 
@@ -13,6 +57,9 @@ Server::~Server() {
   for (const auto &[conn_fd, conn]: this->conns) {
     delete conn;
   }
+
+  if (this->master != nullptr) delete this->master;
+  this->master = nullptr;
 }
 
 void Server::acceptNewConn() {
@@ -48,6 +95,20 @@ void Server::config(int argc, char ** argv) {
         if (ptr + 1 == argc) throw std::runtime_error("Expected 1 argument for option '--port'. got nothing.");
         this->port = std::atoi(argv[ptr + 1]);
         ptr += 2;
+        continue;
+      }
+      if (opt == "--replicaof") {
+        if (ptr + 2 >= argc) throw std::runtime_error("Expected 2 argument for option '--replicaof'. got nothing.");
+        
+        this->master = new Master(std::string(argv[ptr + 1]), std::atoi(argv[ptr + 2]));
+        this->role = "slave";
+        this->master->config();
+
+        if (!this->master->isRunning()) {
+          this->closeServer(); return;
+        }
+
+        ptr += 3;
         continue;
       }
       throw std::runtime_error("Unknown option '" + opt + "'");

@@ -1,16 +1,32 @@
 #include "Conn.h"
 #pragma once
 
+class Master {
+    std::string host;
+    int port;
+    int fd;
+
+    int state = STATE_READ;
+
+public:
+    Master(std::string _host, int _port);
+    ~Master() {this->closeConn();}
+    void config();
+    bool isRunning() {return this->state != STATE_END;}
+    void closeConn() {close(this->fd); this->state = STATE_END;}
+};
+
 class Server {
     int fd;
     int port = 6379;
-
 
     struct sockaddr_in addr;
 
     int state = STATE_READ;
     std::unordered_map<std::string, Data*> database;
     Timepoint last_poll_time;
+
+    Master* master;
     
     // replication data
     std::string role = "master";
