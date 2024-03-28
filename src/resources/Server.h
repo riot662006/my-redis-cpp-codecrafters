@@ -1,5 +1,15 @@
+#include "utils.h"
 #include "Conn.h"
 #pragma once
+
+class HandshakeError : public std::exception {
+    std::string msg;
+    int stage;
+public:
+    HandshakeError(int _stage, const std::string& _msg) : stage(_stage), msg(_msg) {};
+
+    const char* what() const noexcept override;
+};
 
 class Master {
     std::string host;
@@ -12,6 +22,7 @@ public:
     Master(std::string _host, int _port);
     ~Master() {this->closeConn();}
     void config();
+    void handshake();
     bool isRunning() {return this->state != STATE_END;}
     void closeConn() {close(this->fd); this->state = STATE_END;}
 };

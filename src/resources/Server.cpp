@@ -1,5 +1,12 @@
 #include "Server.h"
 
+const char* HandshakeError::what() const noexcept {
+    static std::string fullMsg;
+    fullMsg = "Error: handshake error @stage " + std::to_string(this->stage) + " => " + this->msg;
+
+    return fullMsg.c_str();
+}
+
 Master::Master(std::string _host, int _port) {
   this->host = _host;
   this->port = _port;
@@ -11,37 +18,54 @@ Master::Master(std::string _host, int _port) {
   }
 };
 
+void Master::handshake() {
+  if (!this->isRunning()) return;
+
+  char tempBuffer[1024] = {0};
+  Buffer buffer = Buffer();
+
+  // stage 1
+  std::cerr << "Handshake stage 1...";
+  std::string ping{"*1\r\n$4\r\nping\r\n"};
+
+  int n = write(this->fd, ping.c_str(), ping.size());
+  if (n < 14) throw HandshakeError(1, "Could not send ping");
+
+  n = recv(this->fd, tempBuffer, 1024, 0);
+  if (n <= 0) throw HandshakeError(1,"Did not receive feedback on ping command");
+
+  buffer.addToBuffer(tempBuffer, n);
+  if (buffer.getString(n) != "+PONG\r\n") throw HandshakeError(1, "Invalid response to ping command. Got '" + buffer.getString(n) + "'");
+  std::cerr << "complete\n";
+}
+
 void Master::config() {
   if (!this->isRunning()) return;
   
-  struct addrinfo hints, *res;
-  memset(&hints, 0, sizeof hints);
-  hints.ai_family = AF_INET; // Use IPv4
-  hints.ai_socktype = SOCK_STREAM; // TCP socket
-
-  int status = getaddrinfo(this->host.c_str(), std::to_string(this->port).c_str(), &hints, &res);
-  if (status != 0) {
-    std::cerr << "Error getting address info: " << gai_strerror(status) << std::endl;
+  struct sockaddr_in server_addr;
+  memset(&server_addr, 0, sizeof(server_addr));
+  server_addr.sin_family = AF_INET;
+  server_addr.sin_port = htons(port);
+  // Handling "localhost" specifically or ensuring host is an IP address
+  std::string ip = (host == "localhost") ? "127.0.0.1" : host;
+  if (inet_pton(AF_INET, ip.c_str(), &server_addr.sin_addr) <= 0) {
+    std::cerr << "Invalid master address / master address not supported\n";
     this->closeConn(); return;
   }
 
-  // Create socket
-  int sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
-  if (sockfd == -1) {
-    std::cerr << "Error creating socket\n";
-    freeaddrinfo(res);
+  if (connect(this->fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
+    std::cerr << "Failed to connect to master server\n";
     this->closeConn(); return;
   }
 
-  // Connect to the server
-  if (connect(sockfd, res->ai_addr, res->ai_addrlen) == -1) {
-    std::cerr << "Error connecting to server\n";
-    freeaddrinfo(res);
-    this->closeConn(); return;
-  }
+  std::cerr << "Connected to master server at " << this->host << "::" << port << "\n";
 
-  std::cout << "Connected to server on " << this->host << ":" << port << std::endl;
-  freeaddrinfo(res);
+  try {
+    this->handshake();
+  } catch (HandshakeError& e) {
+    std::cerr << e.what() << '\n';
+    this->closeConn();
+  }
 }
 
 Server::Server() {
