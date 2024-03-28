@@ -66,6 +66,16 @@ void Master::handshake() {
   buffer.clearData(n);
 
   std::cerr << "complete\n";
+
+  // stage 3
+  std::cerr << "Handshake stage 3...";
+  std::string psync = "*3\r\n$5\r\nPSYNC\r\n$1\r\n?\r\n$2\r\n-1\r\n";
+
+  n = send(this->fd, psync.c_str(), psync.size(), 0);
+  if (n < psync.size()) throw HandshakeError(3, "Could not send psync command");
+
+  // n = recv(this->fd, tempBuffer, 1024, 0);
+  std::cerr << "complete\n";
 }
 
 void Master::config(Server* _server) {
