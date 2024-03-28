@@ -26,6 +26,16 @@ std::string to_readable(std::string str) {
     return res;
 }
 
+std::string to_lowercase(std::string str) {
+    std::string res = "";
+
+    for (auto c : str) {
+        res += std::tolower(c);
+    }
+
+    return res;
+}
+
 int Buffer::addToBuffer(char* data, size_t n) {
     if (MAX_BUF_SIZE - this->bytes < n) return -1;
     memcpy(this->buf + this->bytes, data, n);

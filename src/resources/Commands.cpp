@@ -14,6 +14,7 @@ CommandManager::CommandManager(Server* _server) {
     this->functionMap.insert({"echo", EchoCommand});
     this->functionMap.insert({"set", SetCommand});
     this->functionMap.insert({"get", GetCommand});
+    this->functionMap.insert({"info", InfoCommand});
 }
 
 std::string PingCommand(Server* server, std::queue<Data*> args) {
@@ -70,8 +71,17 @@ std::string GetCommand(Server* server, std::queue<Data*> args) {
     return data->toRespString();
 }
 
+std::string InfoCommand(Server* server, std::queue<Data*> args) {
+    if (args.size() != 1) throw CommandError("info", "expected 1 arguments, got " + std::to_string(args.size()));
+    std::string infoSection = args.front()->getStringData();
+
+    if (infoSection == "replication") {
+        return Data(server->getReplInfo()).toRespString();
+    } else throw CommandError("info", "invalid info section '" + infoSection + "'");
+}
+
 std::string CommandManager::runCommand(Data* cmd) {
-    std::string cmdName = cmd->getArrayData()[0]->getStringData();
+    std::string cmdName = to_lowercase(cmd->getArrayData()[0]->getStringData());
     std::queue<Data*> args;
     for (int i = 1; i < cmd->getArrayData().size(); ++i) {
         args.push(cmd->getArrayData()[i]);

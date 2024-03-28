@@ -12,6 +12,7 @@
 #include <iostream>
 #include <netdb.h>
 #include <poll.h>
+#include <sstream>
 #include <stack>
 #include <string>
 #include <sys/socket.h>
@@ -78,4 +79,5 @@ public:
 
 int fd_set_nb(int fd);
 std::string to_readable(std::string str);
+std::string to_lowercase(std::string str);
 Timepoint getNow();

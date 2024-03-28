@@ -19,6 +19,7 @@ std::string PingCommand(Server* server, std::queue<Data*> args);
 std::string EchoCommand(Server* server, std::queue<Data*> args);
 std::string SetCommand(Server* server, std::queue<Data*> args);
 std::string GetCommand(Server* server, std::queue<Data*> args);
+std::string InfoCommand(Server* server, std::queue<Data*> args);
 
 class CommandManager {
 private:

@@ -146,3 +146,18 @@ int Server::delData(std::string key) {
   delete data;
   return 1;
 }
+
+std::string Server::getReplInfo() {
+  std::stringstream info;
+  info << "role:" << this->role << "\n";
+  info << "connected_slaves:" << this->connected_slaves << "\n";
+  info << "master_replid:" << this->master_replid << "\n";
+  info << "master_repl_offset:" << this->master_repl_offset << "\n";
+  info << "second_repl_offset:" << this->second_repl_offset << "\n";
+  info << "repl_backlog_active:" << this->repl_backlog_active << "\n";
+  info << "repl_backlog_size:" << this->repl_backlog_size << "\n";
+  info << "repl_backlog_first_byte_offset:" << this->repl_backlog_first_byte_offset << "\n";
+  info << "repl_backlog_histlen:" << this->repl_backlog_histlen;
+
+  return info.str();
+}
