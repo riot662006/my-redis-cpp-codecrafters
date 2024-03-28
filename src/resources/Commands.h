@@ -21,6 +21,7 @@ std::string SetCommand(Server* server, Conn* conn, std::queue<Data*> args);
 std::string GetCommand(Server* server, Conn* conn, std::queue<Data*> args);
 std::string InfoCommand(Server* server, Conn* conn, std::queue<Data*> args);
 std::string ReplconfCommand(Server* server, Conn* conn, std::queue<Data*> args);
+std::string PsyncCommand(Server* server, Conn* conn, std::queue<Data*> args);
 
 class CommandManager {
 private:

@@ -80,4 +80,6 @@ public:
     int delData(std::string key);
 
     std::string getReplInfo();
+    std::string getReplId() {return this->master_replid;};
+    int getReplOffest() {return this->master_repl_offset;};
 };

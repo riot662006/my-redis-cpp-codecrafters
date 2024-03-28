@@ -17,6 +17,7 @@ CommandManager::CommandManager(Server* _server) {
     this->functionMap.insert({"info", InfoCommand});
 
     this->functionMap.insert({"replconf", ReplconfCommand});
+    this->functionMap.insert({"psync", PsyncCommand});
 }
 
 std::string PingCommand(Server* server, Conn* conn, std::queue<Data*> args) {
@@ -63,10 +64,11 @@ std::string SetCommand(Server* server, Conn* conn, std::queue<Data*> args) {
 
 std::string GetCommand(Server* server, Conn* conn, std::queue<Data*> args) {
     if (args.size() != 1) throw CommandError("get", "expected 1 arguments, got " + std::to_string(args.size()));
-    Data* data = server->getData(args.front()->getStringData());
+    std::string key = args.front()->getStringData(); args.pop();
+    Data* data = server->getData(key);
 
     if (data->hasExpired()) {
-        server->delData(args.front()->getStringData());
+        server->delData(key);
         return "$-1\r\n"; // null bulk string
     }
 
@@ -75,7 +77,7 @@ std::string GetCommand(Server* server, Conn* conn, std::queue<Data*> args) {
 
 std::string InfoCommand(Server* server, Conn* conn, std::queue<Data*> args) {
     if (args.size() != 1) throw CommandError("info", "expected 1 arguments, got " + std::to_string(args.size()));
-    std::string infoSection = args.front()->getStringData();
+    std::string infoSection = args.front()->getStringData(); args.pop();
 
     if (infoSection == "replication") {
         return Data(server->getReplInfo()).toRespString();
@@ -84,17 +86,37 @@ std::string InfoCommand(Server* server, Conn* conn, std::queue<Data*> args) {
 
 std::string ReplconfCommand(Server* server, Conn* conn, std::queue<Data*> args) {
     if (args.size() != 2) throw CommandError("replconf", "expected 1 arguments, got " + std::to_string(args.size()));
-    std::string opt = args.front()->getStringData(); args.pop();
+    std::string opt, arg;
+    
+    while (!args.empty()) {
+        opt = args.front()->getStringData(); args.pop();
+        arg = args.front()->getStringData(); args.pop();
 
-    if (opt == "listening-port") {
-        conn->repl_port = std::stoi(args.front()->getStringData());
-    } else if (opt == "capa") {
-        if (args.front()->getStringData() == "psync2") {
-            conn->isSlave = true;
-        } else throw CommandError("replconf", "Unknown input. capa can not be '" + args.front()->getStringData() + "'");
-    } else throw CommandError("replconf", "Unknown option '" + opt + "'");
+        if (opt == "listening-port") {
+            conn->repl_port = std::stoi(arg);
+        } else if (opt == "capa") {
+            if (arg == "psync2") {
+                conn->isSlave = true;
+            } else if (arg == "eof") {
+                // inform the server that the client is capable of processing the EOF (end of file) marker during replication.
+                // Don't know what to do with this right now
+            } else throw CommandError("replconf", "Unknown input. capa can not be '" + arg + "'");
+        } else throw CommandError("replconf", "Unknown option '" + opt + "'");
+    }
 
     return "+OK\r\n";
+}
+
+std::string PsyncCommand(Server* server, Conn* conn, std::queue<Data*> args) {
+    if (args.size() != 2) throw CommandError("psync", "expected 1 arguments, got " + std::to_string(args.size()));
+    if (!conn->isSlave) throw CommandError("psync", "Unauthorized command. client is not a replica of server");
+
+    std::string replId = args.front()->getStringData(); args.pop();
+    int replOffset = std::stoi(args.front()->getStringData()); args.pop();
+
+    if (replId == "?" && replOffset == -1) {
+        return "+FULLRESYNC " + server->getReplId() + " " + std::to_string(server->getReplOffest()) + "\r\n";
+    } else throw CommandError("psync", "Invalid psync arguments. replId = '" + replId + "', replOffset = " + std::to_string(replOffset));
 }
 
 std::string CommandManager::runCommand(Data* cmd) {
