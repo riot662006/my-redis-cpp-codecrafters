@@ -225,13 +225,13 @@ void Server::updateStatus() {
   polls.push_back(pfd);
 
   for (const auto& [conn_fd, conn] : this->conns) {
-      if (conn->state == STATE_END) {deadConns.push(conn_fd); continue;}
+    if (conn->state == STATE_END) {deadConns.push(conn_fd); continue;}
 
-      auto op = POLLERR | POLLHUP;
-      if (conn->state == STATE_READ) op |= POLLIN;
-      if (conn->state == STATE_WRITE) op |= POLLOUT;
+    auto op = POLLERR | POLLHUP;
+    if (conn->state == STATE_READ) op |= POLLIN;
+    if (conn->state == STATE_WRITE) op |= POLLOUT;
 
-      polls.push_back(pollfd{conn_fd, (short) op, 0});
+    polls.push_back(pollfd{conn_fd, (short) op, 0});
   }
 
   // deletes dead connections

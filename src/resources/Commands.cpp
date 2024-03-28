@@ -15,20 +15,22 @@ CommandManager::CommandManager(Server* _server) {
     this->functionMap.insert({"set", SetCommand});
     this->functionMap.insert({"get", GetCommand});
     this->functionMap.insert({"info", InfoCommand});
+
+    this->functionMap.insert({"replconf", ReplconfCommand});
 }
 
-std::string PingCommand(Server* server, std::queue<Data*> args) {
+std::string PingCommand(Server* server, Conn* conn, std::queue<Data*> args) {
     if (args.size() != 0) throw CommandError("ping", "expected 0 arguments, got " + std::to_string(args.size()));
     return "+PONG\r\n";
 }
 
-std::string EchoCommand(Server* server, std::queue<Data*> args) {
+std::string EchoCommand(Server* server, Conn* conn, std::queue<Data*> args) {
     if (args.size() != 1) throw CommandError("echo", "expected 1 arguments, got " + std::to_string(args.size()));
     
     return args.front()->toRespString();
 }
 
-std::string SetCommand(Server* server, std::queue<Data*> args) {
+std::string SetCommand(Server* server, Conn* conn, std::queue<Data*> args) {
     if (args.size() < 2) throw CommandError("set", "expected 2 or more arguments, got " + std::to_string(args.size()));
 
     std::string key = args.front()->getStringData(); args.pop();
@@ -59,7 +61,7 @@ std::string SetCommand(Server* server, std::queue<Data*> args) {
     return "+OK\r\n";
 }
 
-std::string GetCommand(Server* server, std::queue<Data*> args) {
+std::string GetCommand(Server* server, Conn* conn, std::queue<Data*> args) {
     if (args.size() != 1) throw CommandError("get", "expected 1 arguments, got " + std::to_string(args.size()));
     Data* data = server->getData(args.front()->getStringData());
 
@@ -71,13 +73,28 @@ std::string GetCommand(Server* server, std::queue<Data*> args) {
     return data->toRespString();
 }
 
-std::string InfoCommand(Server* server, std::queue<Data*> args) {
+std::string InfoCommand(Server* server, Conn* conn, std::queue<Data*> args) {
     if (args.size() != 1) throw CommandError("info", "expected 1 arguments, got " + std::to_string(args.size()));
     std::string infoSection = args.front()->getStringData();
 
     if (infoSection == "replication") {
         return Data(server->getReplInfo()).toRespString();
     } else throw CommandError("info", "invalid info section '" + infoSection + "'");
+}
+
+std::string ReplconfCommand(Server* server, Conn* conn, std::queue<Data*> args) {
+    if (args.size() != 2) throw CommandError("replconf", "expected 1 arguments, got " + std::to_string(args.size()));
+    std::string opt = args.front()->getStringData(); args.pop();
+
+    if (opt == "listening-port") {
+        conn->repl_port = std::stoi(args.front()->getStringData());
+    } else if (opt == "capa") {
+        if (args.front()->getStringData() == "psync2") {
+            conn->isSlave = true;
+        } else throw CommandError("replconf", "Unknown input. capa can not be '" + args.front()->getStringData() + "'");
+    } else throw CommandError("replconf", "Unknown option '" + opt + "'");
+
+    return "+OK\r\n";
 }
 
 std::string CommandManager::runCommand(Data* cmd) {
@@ -88,7 +105,26 @@ std::string CommandManager::runCommand(Data* cmd) {
     }
     
     if (this->functionMap.find(cmdName) == this->functionMap.end()) throw CommandError("_", "command Name '" + cmdName + "' does not exist.");
-    std::string response = this->functionMap[cmdName](this->server, args);
+    std::string response = this->functionMap[cmdName](this->server, this->curConn, args);
 
     return response;
+}
+
+void CommandManager::tryProcess(Conn* conn) {
+    if (conn->processMem != nullptr) {
+        if (conn->processMem->getType() == DataType::ARRAY) { // is a commmand
+            try {
+                this->curConn = conn;
+                std::string response = this->runCommand(conn->processMem);
+                tryAddResponse(conn, response);
+            } catch (CommandError& e) {
+                std::cerr << e.what() << "\n";
+                this->curConn = nullptr;
+                tryAddResponse(conn, "$-1\r\n");
+            }
+        }
+
+        delete conn->processMem;
+        conn->processMem = nullptr;
+    }
 }

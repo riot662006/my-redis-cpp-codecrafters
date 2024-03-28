@@ -12,6 +12,10 @@ struct Conn {
     std::deque<std::string> writeQueue;
     short last_poll;
 
+    // for replication
+    int repl_port = -1;
+    bool isSlave = false; // capable of psync = slave
+
     Conn(int f) : fd(f) {
         rbuf = new Buffer();
         parser = new CommandParser(rbuf);

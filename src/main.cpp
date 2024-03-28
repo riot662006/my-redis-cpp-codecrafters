@@ -16,21 +16,7 @@ int main(int argc, char **argv) {
                 tryRead(conn);
             }
 
-            if (conn->processMem != nullptr) {
-                if (conn->processMem->getType() == DataType::ARRAY) { // is a commmand
-                    try {
-                        std::string response = cmdManager.runCommand(conn->processMem);
-
-                        tryAddResponse(conn, response);
-                    } catch (CommandError& e) {
-                        std::cerr << e.what() << "\n";
-                        tryAddResponse(conn, "$-1\r\n");
-                    }
-                }
-
-                delete conn->processMem;
-                conn->processMem = nullptr;
-            } 
+            cmdManager.tryProcess(conn);
 
             if (conn->last_poll | POLLOUT) {
                 tryWrite(conn);
