@@ -64,7 +64,7 @@ std::string GetCommand(Server* server, std::queue<Data*> args) {
 
     if (data->hasExpired()) {
         server->delData(args.front()->getStringData());
-        data = new Data(); // null bulk string
+        return "$-1\r\n"; // null bulk string
     }
 
     return data->toRespString();

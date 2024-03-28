@@ -3,6 +3,8 @@
 
 class Server {
     int fd;
+    int port = 6379;
+
     struct sockaddr_in addr;
 
     int state = STATE_READ;
@@ -21,6 +23,7 @@ public:
     bool isRunning() {return this->state != STATE_END;}
     void updateStatus();
 
+    void config(int argc, char ** argv);
     void closeServer() {close(this->fd); this->state = STATE_END;}
 
     Conn* getConn(int fd) {return conns[fd];}
@@ -30,5 +33,3 @@ public:
     Data* getData(std::string key);
     int delData(std::string key);
 };
-
-void serverConfig(Server* server, int argc, char ** argv);

@@ -37,34 +37,52 @@ void Server::acceptNewConn() {
   std::cerr << "Conn@" << client_fd << ": connected\n";
 }
 
-void serverConfig(Server* server, int argc, char ** argv) {
-  if (!server->isRunning()) return;
+void Server::config(int argc, char ** argv) {
+  if (!this->isRunning()) return;
+
+  size_t ptr = 1;
+  try {
+    while (ptr < argc) {
+      std::string opt(argv[ptr]);
+      if (opt == "--port") {
+        if (ptr + 1 == argc) throw std::runtime_error("Expected 1 argument for option '--port'. got nothing.");
+        this->port = std::atoi(argv[ptr + 1]);
+        ptr += 2;
+        continue;
+      }
+      throw std::runtime_error("Unknown option '" + opt + "'");
+    }
+  } catch (std::exception& e){
+    std::cerr << "error while parsing arguments => " << e.what() << "\n";
+    this->closeServer(); return;
+  }
+  
 
   int reuse = 1;
-  if (setsockopt(server->getFd(), SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse)) < 0) {
+  if (setsockopt(this->fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse)) < 0) {
     std::cerr << "setsockopt failed\n";
-    server->closeServer(); return;
+    this->closeServer(); return;
   }
 
   struct sockaddr_in server_addr;
   server_addr.sin_family = AF_INET;
   server_addr.sin_addr.s_addr = INADDR_ANY;
-  server_addr.sin_port = htons(6379);
+  server_addr.sin_port = htons(this->port);
   
-  if (bind(server->getFd(), (struct sockaddr *) &server_addr, sizeof(server_addr)) != 0) {
+  if (bind(this->fd, (struct sockaddr *) &server_addr, sizeof(server_addr)) != 0) {
     std::cerr << "Failed to bind to port 6379\n";
-    server->closeServer(); return;
+    this->closeServer(); return;
   }
 
   int connection_backlog = 5;
-  if (listen(server->getFd(), connection_backlog) != 0) {
+  if (listen(this->fd, connection_backlog) != 0) {
     std::cerr << "listen failed\n";
-    server->closeServer(); return;
+    this->closeServer(); return;
   }
 
-  if (fd_set_nb(server->getFd()) < 0) {
+  if (fd_set_nb(this->fd) < 0) {
     std::cerr << "Failed to set server to non-blocking mode\n";
-    server->closeServer(); return;
+    this->closeServer(); return;
   }
 
   std::cerr << "Server online\n";

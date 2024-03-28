@@ -4,7 +4,7 @@
 int main(int argc, char **argv) {
     // Server socket initializer
     Server* server = new Server();
-    serverConfig(server, argc, argv);
+    server->config(argc, argv);
 
     CommandManager cmdManager = CommandManager(server);
 
