@@ -146,6 +146,7 @@ void Server::config(int argc, char ** argv) {
     this->closeServer(); return;
   }
 
+  this->generateReplId();
   std::cerr << "Server online\n";
 }
 
@@ -221,4 +222,16 @@ std::string Server::getReplInfo() {
   info << "repl_backlog_histlen:" << this->repl_backlog_histlen;
 
   return info.str();
+}
+
+void Server::generateReplId() {
+  const std::string characters = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_int_distribution<> dis(0, characters.size() - 1);
+
+  this->master_replid = "";
+  for (int i = 0; i < 40; ++i) {
+    this->master_replid += characters[dis(gen)];
+  }
 }

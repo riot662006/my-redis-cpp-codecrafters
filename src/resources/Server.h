@@ -38,6 +38,8 @@ class Server {
     int repl_backlog_size = 1048576;
     int repl_backlog_first_byte_offset = 0;
     int repl_backlog_histlen = 0;
+
+    void generateReplId();
 public:
     std::unordered_map<int, Conn*> conns;
     short last_poll;

@@ -10,6 +10,7 @@
 #include <fcntl.h>
 #include <functional>
 #include <iostream>
+#include <random>
 #include <netdb.h>
 #include <poll.h>
 #include <sstream>
