@@ -74,7 +74,38 @@ void Master::handshake() {
   n = send(this->fd, psync.c_str(), psync.size(), 0);
   if (n < psync.size()) throw HandshakeError(3, "Could not send psync command");
 
-  // n = recv(this->fd, tempBuffer, 1024, 0);
+  n = recv(this->fd, tempBuffer, 1024, 0);
+  if (n <= 0) throw HandshakeError(3, "Did not receive feedback on psync command");
+
+  buffer.addToBuffer(tempBuffer, n);
+
+  HandshakeError commonFullResyncError = HandshakeError(3, "Error while trying to resync. Got '" + buffer.getString(n, true) + "'");
+
+  if (buffer.getString(12) != "+FULLRESYNC ") throw commonFullResyncError;
+  buffer.clearData(12);
+
+  int loc = buffer.find(' ');
+  if (loc == -1) throw commonFullResyncError;
+  if (loc != 40) throw HandshakeError(3, "Replication ids are 40 characters. got " + std::to_string(loc));
+
+  server->master_replid = buffer.getString(loc);
+  buffer.clearData(41);
+
+  loc = buffer.find('\r');
+  if (loc == -1) throw commonFullResyncError;
+  if (buffer.at(loc + 1) != '\n') throw commonFullResyncError;
+
+  server->master_repl_offset = std::stoi(buffer.getString(loc));
+  buffer.clearData(loc + 2);
+  
+  if (buffer.isEmpty()) {
+    n = recv(this->fd, tempBuffer, 1024, 0);
+    if (n <= 0) throw HandshakeError(3, "Did not receive the RDB file");
+
+    buffer.addToBuffer(tempBuffer, n);
+  }
+
+  std::cerr << buffer.getString(n, true) << '\n'; // will enable parsing later
   std::cerr << "complete\n";
 }
 

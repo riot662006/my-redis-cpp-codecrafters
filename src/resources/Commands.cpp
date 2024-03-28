@@ -115,7 +115,8 @@ std::string PsyncCommand(Server* server, Conn* conn, std::queue<Data*> args) {
     int replOffset = std::stoi(args.front()->getStringData()); args.pop();
 
     if (replId == "?" && replOffset == -1) {
-        return "+FULLRESYNC " + server->getReplId() + " " + std::to_string(server->getReplOffest()) + "\r\n";
+        conn->writeQueue.push_back("+FULLRESYNC " + server->getReplId() + " " + std::to_string(server->getReplOffest()) + "\r\n");
+        return "$" + std::to_string(EMPTY_RDB_SIZE) + "\r\n" + std::string(emptyRDB, emptyRDB + EMPTY_RDB_SIZE);
     } else throw CommandError("psync", "Invalid psync arguments. replId = '" + replId + "', replOffset = " + std::to_string(replOffset));
 }
 

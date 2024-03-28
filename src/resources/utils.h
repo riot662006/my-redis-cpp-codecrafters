@@ -24,6 +24,8 @@
 #include <vector>
 #include <deque>
 
+const size_t EMPTY_RDB_SIZE = 88;
+
 using Timepoint = std::chrono::system_clock::time_point;
 using Milliseconds = std::chrono::milliseconds;
 
@@ -72,6 +74,7 @@ public:
     
     char* getBuffer() {return this->buf;}
     std::string getString(size_t n, bool readable = false);
+    size_t find(char c);
     bool isEmpty() {return this->bytes == 0;}
     char at(size_t n) {return (n < bytes) ? (*(this->buf + n)) : 0;}
     void pop() {this->clearData(1);}
@@ -82,3 +85,6 @@ int fd_set_nb(int fd);
 std::string to_readable(std::string str);
 std::string to_lowercase(std::string str);
 Timepoint getNow();
+
+extern char emptyRDB[EMPTY_RDB_SIZE];
+extern Buffer emptyRDBBf;
