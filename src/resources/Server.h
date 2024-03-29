@@ -65,6 +65,7 @@ public:
     void acceptNewConn();
 
     int getFd() {return this->fd;}
+    bool isMaster() {return this->role == "master";}
     Timepoint getLastPollTime() {return this->last_poll_time;}
     bool isRunning() {return this->state != STATE_END;}
     void updateStatus();
@@ -78,6 +79,8 @@ public:
     void setData(std::string key, Data* val);
     Data* getData(std::string key);
     int delData(std::string key);
+
+    void propagate(std::string cmd);
 
     std::string getReplInfo();
     std::string getReplId() {return this->master_replid;};

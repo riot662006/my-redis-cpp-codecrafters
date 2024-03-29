@@ -10,6 +10,9 @@ const char* CommandError::what() const noexcept {
 CommandManager::CommandManager(Server* _server) {
     this->server = _server;
 
+    this->writeCommands.push_back("set");
+    this->writeCommands.push_back("del");
+
     this->functionMap.insert({"ping", PingCommand});
     this->functionMap.insert({"echo", EchoCommand});
     this->functionMap.insert({"set", SetCommand});
@@ -122,9 +125,16 @@ std::string PsyncCommand(Server* server, Conn* conn, std::queue<Data*> args) {
 
 std::string CommandManager::runCommand(Data* cmd) {
     std::string cmdName = to_lowercase(cmd->getArrayData()[0]->getStringData());
+
     std::queue<Data*> args;
     for (int i = 1; i < cmd->getArrayData().size(); ++i) {
         args.push(cmd->getArrayData()[i]);
+    }
+
+    bool isWriteCmd = std::find(this->writeCommands.begin(), this->writeCommands.end(), cmdName) != this->writeCommands.end();
+    if (isWriteCmd && !this->server->isMaster()) throw CommandError("set", "Write operations can only be done by master server\n");
+    if (isWriteCmd) {
+        this->server->propagate(cmd->toRespString());
     }
     
     if (this->functionMap.find(cmdName) == this->functionMap.end()) throw CommandError("_", "command Name '" + cmdName + "' does not exist.");

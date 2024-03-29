@@ -28,6 +28,7 @@ private:
     Server* server;
     Conn* curConn;
     std::unordered_map<std::string, CommandFunctionType> functionMap;
+    std::vector<std::string> writeCommands;
 public:
     CommandManager(Server* _server);
 

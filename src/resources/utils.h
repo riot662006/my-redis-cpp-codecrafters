@@ -1,10 +1,12 @@
 #pragma once
 
+#include <algorithm>
 #include <arpa/inet.h>
 #include <chrono>
 #include <csignal>
 #include <cstdlib>
 #include <cstring>
+#include <deque>
 #include <errno.h>
 #include <exception>
 #include <fcntl.h>
@@ -22,7 +24,6 @@
 #include <unordered_map>
 #include <queue>
 #include <vector>
-#include <deque>
 
 const size_t EMPTY_RDB_SIZE = 88;
 

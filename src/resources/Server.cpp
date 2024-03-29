@@ -250,6 +250,7 @@ void Server::updateStatus() {
   this->last_poll_time = getNow();
 
   std::vector<pollfd> polls;
+
   std::stack<int> deadConns;
 
   struct pollfd pfd = {this->fd, POLLIN, 0};
@@ -318,6 +319,12 @@ std::string Server::getReplInfo() {
   info << "repl_backlog_histlen:" << this->repl_backlog_histlen;
 
   return info.str();
+}
+
+void Server::propagate(std::string cmd) {
+  for (auto &[conn_fd, conn] :this->conns) {
+    if (conn->isSlave) conn->writeQueue.push_back(cmd);
+  }
 }
 
 void Server::generateReplId() {
