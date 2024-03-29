@@ -31,20 +31,20 @@ std::string PingCommand(Server* server, Conn* conn, std::queue<Data*> args) {
 std::string EchoCommand(Server* server, Conn* conn, std::queue<Data*> args) {
     if (args.size() != 1) throw CommandError("echo", "expected 1 arguments, got " + std::to_string(args.size()));
     
-    return args.front()->toRespString();
+    return args.front()->toRespString(); // gives back the string
 }
 
 std::string SetCommand(Server* server, Conn* conn, std::queue<Data*> args) {
     if (args.size() < 2) throw CommandError("set", "expected 2 or more arguments, got " + std::to_string(args.size()));
 
     std::string key = args.front()->getStringData(); args.pop();
-    Data* value = args.front(); args.pop();
+    Data* value = args.front(); args.pop(); // gets and modifies the data to be stored
 
     std::string opt;
     try {
         while (!args.empty()) {
             opt = args.front()->getStringData(); args.pop();
-            if (opt == "px") {
+            if (opt == "px") { // set expiry by milliseconds from last poll
                 size_t milli = std::stoi(args.front()->getStringData());
                 value->addExpiry(server->getLastPollTime(), milli);
                 args.pop();
@@ -61,7 +61,7 @@ std::string SetCommand(Server* server, Conn* conn, std::queue<Data*> args) {
         throw CommandError("set", errorMsg);
     }
 
-    server->setData(key, value);
+    server->setData(key, value); // adds to the key value database
     return "+OK\r\n";
 }
 
@@ -118,13 +118,13 @@ std::string PsyncCommand(Server* server, Conn* conn, std::queue<Data*> args) {
     int replOffset = std::stoi(args.front()->getStringData()); args.pop();
 
     if (replId == "?" && replOffset == -1) {
-        conn->writeQueue.push_back("+FULLRESYNC " + server->getReplId() + " " + std::to_string(server->getReplOffest()) + "\r\n");
-        return "$" + std::to_string(EMPTY_RDB_SIZE) + "\r\n" + std::string(emptyRDB, emptyRDB + EMPTY_RDB_SIZE);
+        conn->writeQueue.push_back("+FULLRESYNC " + server->getReplId() + " " + std::to_string(server->getReplOffest()) + "\r\n"); // adds the fullresync directly
+        return "$" + std::to_string(EMPTY_RDB_SIZE) + "\r\n" + std::string(emptyRDB, emptyRDB + EMPTY_RDB_SIZE); // returns the rdb
     } else throw CommandError("psync", "Invalid psync arguments. replId = '" + replId + "', replOffset = " + std::to_string(replOffset));
 }
 
 std::string CommandManager::runCommand(Data* cmd) {
-    std::string cmdName = to_lowercase(cmd->getArrayData()[0]->getStringData());
+    std::string cmdName = to_lowercase(cmd->getArrayData()[0]->getStringData()); //  makes sure the cmd is lowercase
 
     std::queue<Data*> args;
     for (int i = 1; i < cmd->getArrayData().size(); ++i) {
@@ -155,9 +155,10 @@ void CommandManager::tryProcess(Conn* conn) {
                 this->curConn = nullptr;
                 tryAddResponse(conn, "$-1\r\n");
             }
-        }
+        } // else is probably a response
 
         delete conn->processMem;
         conn->processMem = nullptr;
     }
+
 }

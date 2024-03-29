@@ -26,8 +26,8 @@ std::string PsyncCommand(Server* server, Conn* conn, std::queue<Data*> args);
 class CommandManager {
 private:
     Server* server;
-    Conn* curConn;
-    std::unordered_map<std::string, CommandFunctionType> functionMap;
+    Conn* curConn; // changes when tryProcess is called
+    std::unordered_map<std::string, CommandFunctionType> functionMap; 
     std::vector<std::string> writeCommands;
 public:
     CommandManager(Server* _server);

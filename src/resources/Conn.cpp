@@ -8,14 +8,14 @@ void tryRead(Conn* conn) {
 
     do {
         n = recv(conn->fd, tempBuffer, MAX_BUF_SIZE - conn->rbuf->size(), 0);
-    } while (n < 0 && errno == EINTR);
+    } while (n < 0 && errno == EINTR); // makes sure to get data if any
     
     if (n < 0) {
-        if (errno != EAGAIN && errno != EWOULDBLOCK) {
+        if (errno != EAGAIN && errno != EWOULDBLOCK) { // error
             std::cerr << "Conn@" << conn->fd << ": read() error\n";
             conn->state = STATE_END;
         }
-    } else if (n == 0) {
+    } else if (n == 0) { // socket connection is closed
         std::cerr << "Conn@" << conn->fd << ": EoF\n";
         conn->state = STATE_END;
     } else {
@@ -26,12 +26,12 @@ void tryRead(Conn* conn) {
 
     try {
         while (true){
-            conn->parser->parse();
+            conn->parser->parse(); // parses until useful info is completely gotten and the parsr closes / an error occurs
         }
     } catch (ParserError& e){
         std::cerr << e.what() << '\n';
         conn->state = STATE_END;
-    } catch (ParserEOF& e) {
+    } catch (ParserEOF& e) { // if an eof, checks if parser got information
         if (!conn->parser->isDone()) return;
 
         conn->processMem = conn->parser->toData();
