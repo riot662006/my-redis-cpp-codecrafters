@@ -15,9 +15,12 @@ public:
 };
 
 class Master {
+private:
+    friend Server;
     std::string host;
     int port;
     int fd;
+    Conn* conn;
 
     int state = STATE_READ;
     Server* server;
@@ -75,6 +78,7 @@ public:
     void closeServer() {close(this->fd); this->state = STATE_END;}
 
     Conn* getConn(int fd) {return conns[fd];}
+    Conn* getMasterConn() {return (this->master == nullptr) ? nullptr : this->master->conn;}
     void deleteConnAt(int fd) {close(fd); delete conns[fd]; conns.erase(fd);}
 
     void setData(std::string key, Data* val);

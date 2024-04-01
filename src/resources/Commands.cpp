@@ -70,6 +70,8 @@ std::string GetCommand(Server* server, Conn* conn, std::queue<Data*> args) {
     std::string key = args.front()->getStringData(); args.pop();
     Data* data = server->getData(key);
 
+    if (data == nullptr) return "$-1\r\n";
+
     if (data->hasExpired()) {
         server->delData(key);
         return "$-1\r\n"; // null bulk string
@@ -132,7 +134,9 @@ std::string CommandManager::runCommand(Data* cmd) {
     }
 
     bool isWriteCmd = std::find(this->writeCommands.begin(), this->writeCommands.end(), cmdName) != this->writeCommands.end();
-    if (isWriteCmd && !this->server->isMaster()) throw CommandError("set", "Write operations can only be done by master server\n");
+    if (this->curConn != this->server->getMasterConn()) {
+        if (isWriteCmd && !this->server->isMaster()) throw CommandError(cmdName, "Write operations can only be done by master server\n");
+    }
     if (isWriteCmd) {
         this->server->propagate(cmd->toRespString());
     }

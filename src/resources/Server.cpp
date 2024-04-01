@@ -138,6 +138,14 @@ void Master::config(Server* _server) {
     std::cerr << e.what() << '\n';
     this->closeConn();
   }
+
+  if (fd_set_nb(this->fd) < 0) {
+    std::cerr << "Unable to set client connection to non-blocking mode\n";
+    this->closeConn();
+    return;
+  }
+
+  this->conn = new Conn(this->fd);
 }
 
 Server::Server() {
@@ -256,6 +264,10 @@ void Server::updateStatus() {
   struct pollfd pfd = {this->fd, POLLIN, 0};
   polls.push_back(pfd);
 
+  if (this->master != nullptr) {
+    polls.push_back(pollfd{this->master->fd, POLLIN | POLLERR | POLLHUP, 0});
+  }
+
   for (const auto& [conn_fd, conn] : this->conns) {
     if (conn->state == STATE_END) {deadConns.push(conn_fd); continue;}
 
@@ -279,7 +291,12 @@ void Server::updateStatus() {
   }
 
   this->last_poll = (ready) ? polls[0].revents : 0;
-  for (int i = 1; i < polls.size(); ++i) {
+
+  if (this->master != nullptr) {
+    this->master->conn->last_poll = (ready) ? polls[1].revents : 0;
+  }
+
+  for (int i = ((this->master == nullptr) ? 1 : 2) ; i < polls.size(); ++i) {
     this->conns[polls[i].fd]->last_poll = (ready) ? polls[i].revents : 0;
   }
 }
